@@ -66,7 +66,7 @@ No API key or Python dependency install is required.
 
 ## Daily Automation
 
-GitHub Actions runs `.github/workflows/daily_gas_price.yml` every day at `15:00 UTC`, which is `8:00 AM Pacific` during daylight saving time.
+GitHub Actions runs `.github/workflows/daily_gas_price.yml` every day at `19:00 UTC`, which is noon Pacific during daylight saving time.
 
 You can also run it manually from the GitHub repo's **Actions** tab.
 
