@@ -1,0 +1,36 @@
+name: Daily Gas Price Update
+
+on:
+  schedule:
+    # GitHub Actions uses UTC. 15:00 UTC is 8:00 AM Pacific during daylight saving time.
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+jobs:
+  update_gas_price:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch AAA gas prices
+        run: python scripts/fetch_gas_price.py
+
+      - name: Commit and push gas price data
+        run: |
+          git add data/gas_price.json
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' \
+              -c user.email='github-actions[bot]@users.noreply.github.com' \
+              commit -m "auto: update gas price data"
+            git push
+          fi

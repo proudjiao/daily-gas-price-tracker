@@ -1,0 +1,40 @@
+{
+  "source": "https://gasprices.aaa.com/?state=CA",
+  "zip": "90048",
+  "zip_proxy": "90048 -> Los Angeles-Long Beach metro average",
+  "metro": "Los Angeles-Long Beach",
+  "price_as_of": "5/7/26",
+  "fetched_at": "2026-05-07T07:55:07.674968+00:00",
+  "prices": {
+    "current": {
+      "regular": "$6.244",
+      "mid_grade": "$6.460",
+      "premium": "$6.630",
+      "diesel": "$7.532"
+    },
+    "yesterday": {
+      "regular": "$6.241",
+      "mid_grade": "$6.448",
+      "premium": "$6.619",
+      "diesel": "$7.550"
+    },
+    "week_ago": {
+      "regular": "$6.104",
+      "mid_grade": "$6.322",
+      "premium": "$6.485",
+      "diesel": "$7.559"
+    },
+    "month_ago": {
+      "regular": "$6.048",
+      "mid_grade": "$6.268",
+      "premium": "$6.432",
+      "diesel": "$7.848"
+    },
+    "year_ago": {
+      "regular": "$4.752",
+      "mid_grade": "$4.972",
+      "premium": "$5.131",
+      "diesel": "$4.961"
+    }
+  }
+}
