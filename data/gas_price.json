@@ -2,7 +2,7 @@
   "source": "https://gasprices.aaa.com/?state=CA",
   "metro": "Los Angeles-Long Beach",
   "price_as_of": "5/7/26",
-  "fetched_at": "2026-05-07T08:41:00.585893+00:00",
+  "fetched_at": "2026-05-07T20:11:23.215161+00:00",
   "prices": {
     "current": {
       "regular": "$6.244",
