@@ -4,7 +4,7 @@
   "zip_proxy": "90048 -> Los Angeles-Long Beach metro average",
   "metro": "Los Angeles-Long Beach",
   "price_as_of": "5/7/26",
-  "fetched_at": "2026-05-07T08:07:23.815102+00:00",
+  "fetched_at": "2026-05-07T08:12:47.329273+00:00",
   "prices": {
     "current": {
       "regular": "$6.244",
@@ -35,6 +35,19 @@
       "mid_grade": "$4.972",
       "premium": "$5.131",
       "diesel": "$4.961"
+    }
+  },
+  "recommendation": {
+    "fuel_type": "regular",
+    "status": "high",
+    "trend": "trending_up",
+    "action": "gas_today",
+    "summary": "Prices are high and trending up, so filling today is safer if you need gas soon.",
+    "reason": "Regular is $0.140 above last week and $0.196 above last month.",
+    "comparisons": {
+      "vs_yesterday": 0.003,
+      "vs_week_ago": 0.14,
+      "vs_month_ago": 0.196
     }
   }
 }

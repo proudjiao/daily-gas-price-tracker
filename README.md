@@ -29,9 +29,32 @@ Example shape:
       "premium": "$6.630",
       "diesel": "$7.532"
     }
+  },
+  "recommendation": {
+    "fuel_type": "regular",
+    "status": "high",
+    "trend": "trending_up",
+    "action": "gas_today",
+    "summary": "Prices are high and trending up, so filling today is safer if you need gas soon.",
+    "reason": "Regular is $0.140 above last week and $0.196 above last month.",
+    "comparisons": {
+      "vs_yesterday": 0.003,
+      "vs_week_ago": 0.14,
+      "vs_month_ago": 0.196
+    }
   }
 }
 ```
+
+## Recommendation
+
+The recommendation uses regular gas by default. It compares the current AAA regular price with yesterday, last week, and last month:
+
+- `low`: current price is at least `$0.05` below both last week and last month.
+- `high`: current price is at least `$0.05` above both last week and last month.
+- `normal`: anything between those ranges.
+
+The action is `gas_today`, `wait_if_possible`, or `neutral`.
 
 ## Run Locally
 

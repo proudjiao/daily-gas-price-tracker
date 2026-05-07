@@ -11,6 +11,7 @@ from urllib.request import Request, urlopen
 AAA_STATE_URL = "https://gasprices.aaa.com/?state=CA"
 DEFAULT_METRO = "Los Angeles-Long Beach"
 DEFAULT_OUTPUT = "data/gas_price.json"
+PRICE_CHANGE_THRESHOLD = 0.05
 
 
 class TextParser(HTMLParser):
@@ -79,10 +80,100 @@ def parse_metro_prices(lines, metro):
     return prices
 
 
+def parse_price(price):
+    return float(price.replace("$", "").strip())
+
+
+def format_change(change):
+    direction = "above" if change > 0 else "below"
+    return f"${abs(change):.3f} {direction}"
+
+
+def build_recommendation(prices):
+    current = parse_price(prices["current"]["regular"])
+    yesterday = parse_price(prices["yesterday"]["regular"])
+    week_ago = parse_price(prices["week_ago"]["regular"])
+    month_ago = parse_price(prices["month_ago"]["regular"])
+
+    comparisons = {
+        "vs_yesterday": round(current - yesterday, 3),
+        "vs_week_ago": round(current - week_ago, 3),
+        "vs_month_ago": round(current - month_ago, 3),
+    }
+
+    if (
+        comparisons["vs_week_ago"] <= -PRICE_CHANGE_THRESHOLD
+        and comparisons["vs_month_ago"] <= -PRICE_CHANGE_THRESHOLD
+    ):
+        status = "low"
+    elif (
+        comparisons["vs_week_ago"] >= PRICE_CHANGE_THRESHOLD
+        and comparisons["vs_month_ago"] >= PRICE_CHANGE_THRESHOLD
+    ):
+        status = "high"
+    else:
+        status = "normal"
+
+    trending_up = (
+        comparisons["vs_yesterday"] > 0
+        and comparisons["vs_week_ago"] >= PRICE_CHANGE_THRESHOLD
+        and comparisons["vs_month_ago"] >= PRICE_CHANGE_THRESHOLD
+    )
+    trend = "trending_up" if trending_up else "mixed"
+
+    if status == "low" or trending_up:
+        action = "gas_today"
+    elif status == "high" and comparisons["vs_yesterday"] <= 0:
+        action = "wait_if_possible"
+        trend = "easing"
+    else:
+        action = "neutral"
+
+    reason = (
+        f"Regular is {format_change(comparisons['vs_week_ago'])} last week "
+        f"and {format_change(comparisons['vs_month_ago'])} last month."
+    )
+
+    if status == "low":
+        summary = (
+            "Prices are low versus recent averages, so today is a good day to "
+            "fill up."
+        )
+    elif trending_up:
+        summary = (
+            "Prices are high and trending up, so filling today is safer if you "
+            "need gas soon."
+        )
+    else:
+        summaries = {
+            "wait_if_possible": (
+                "Prices are high and not rising today, so waiting is reasonable "
+                "if your tank is not low."
+            ),
+            "neutral": "Prices are mixed or normal, so buy only if you need gas.",
+        }
+        summary = summaries[action]
+
+    return {
+        "fuel_type": "regular",
+        "status": status,
+        "trend": trend,
+        "action": action,
+        "summary": summary,
+        "reason": reason,
+        "comparisons": comparisons,
+    }
+
+
+def format_label(value):
+    return value.replace("_", " ").title()
+
+
 def build_result():
     metro = os.getenv("GAS_PRICE_METRO", DEFAULT_METRO)
     html = fetch_page(AAA_STATE_URL)
     lines = parse_text_lines(html)
+    prices = parse_metro_prices(lines, metro)
 
     return {
         "source": AAA_STATE_URL,
@@ -94,13 +185,21 @@ def build_result():
         "metro": metro,
         "price_as_of": first_price_date(lines),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
-        "prices": parse_metro_prices(lines, metro),
+        "prices": prices,
+        "recommendation": build_recommendation(prices),
     }
 
 
 def build_email_body(result):
     current = result["prices"]["current"]
+    recommendation = result["recommendation"]
     return (
+        f"Recommendation: {format_label(recommendation['action'])}\n"
+        f"Status: {format_label(recommendation['status'])}, "
+        f"{format_label(recommendation['trend'])}\n"
+        f"Regular: {current['regular']}\n"
+        f"Reason: {recommendation['reason']}\n"
+        f"{recommendation['summary']}\n\n"
         f"Daily gas price update for {result['zip']} "
         f"({result['metro']} metro average)\n\n"
         f"Regular: {current['regular']}\n"
@@ -130,7 +229,8 @@ def send_email(result):
 
     message = EmailMessage()
     message["Subject"] = (
-        f"Gas price update: regular {result['prices']['current']['regular']}"
+        f"Gas price: {result['recommendation']['action'].replace('_', ' ')} "
+        f"({result['prices']['current']['regular']})"
     )
     message["From"] = email_from
     message["To"] = required["EMAIL_TO"]
