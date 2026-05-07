@@ -81,6 +81,8 @@ The workflow can email the daily update through any SMTP account. For Gmail, cre
 - `SMTP_USERNAME`: SMTP username, usually your sender email address.
 - `SMTP_PASSWORD`: SMTP password or Gmail app password.
 
+Emails are sent as a newsletter-style HTML message with a plain-text fallback. The newsletter includes a recommendation card, fuel price snapshot, colored trend arrows, and a short explanation of how the recommendation is generated.
+
 ## Configuration
 
 Optional environment variables:
