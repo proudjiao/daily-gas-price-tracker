@@ -504,23 +504,45 @@ def build_flow_step(label):
 
 
 def build_price_range_bar(insight):
-    marker_position = max(4, min(96, insight["position_pct"]))
+    marker_cells = {
+        "low": ("", "", ""),
+        "typical": ("", "", ""),
+        "high": ("", "", ""),
+    }
+    status = insight["status"]
+    marker_cells[status] = (
+        f"""
+        <div style="display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap;">
+          {escape(insight['label'])}
+        </div>
+        """,
+        """
+        <div style="display:inline-block;width:14px;height:14px;background:#ffffff;border:4px solid #2563eb;border-radius:999px;line-height:14px;font-size:1px;">&nbsp;</div>
+        """,
+        "background:#eff6ff;",
+    )
     return f"""
       <div style="border:1px solid #e2e8f0;background:#ffffff;border-radius:20px;padding:18px;margin-top:16px;">
         <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-weight:800;">Price Range Insight</div>
         <div style="font-size:22px;font-weight:900;color:#0f172a;margin-top:4px;">Prices are currently {escape(insight['status'])} for Los Angeles-Long Beach</div>
-        <div style="position:relative;margin-top:18px;padding-top:28px;">
-          <div style="position:absolute;left:{marker_position}%;top:0;transform:translateX(-50%);background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap;">{escape(insight['label'])}</div>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0;">
-            <tr>
-              <td style="height:8px;background:#16a34a;border-radius:999px 0 0 999px;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
-              <td style="height:8px;background:#eab308;width:34%;font-size:1px;line-height:1px;">&nbsp;</td>
-              <td style="height:8px;background:#dc2626;border-radius:0 999px 999px 0;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
-            </tr>
-          </table>
-          <div style="position:absolute;left:{marker_position}%;top:23px;transform:translateX(-50%);width:14px;height:14px;background:#ffffff;border:4px solid #2563eb;border-radius:999px;"></div>
-        </div>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:16px;border-collapse:collapse;">
+          <tr>
+            <td style="width:33%;text-align:left;height:30px;vertical-align:bottom;{marker_cells['low'][2]}">{marker_cells['low'][0]}</td>
+            <td style="width:34%;text-align:center;height:30px;vertical-align:bottom;{marker_cells['typical'][2]}">{marker_cells['typical'][0]}</td>
+            <td style="width:33%;text-align:right;height:30px;vertical-align:bottom;{marker_cells['high'][2]}">{marker_cells['high'][0]}</td>
+          </tr>
+          <tr>
+            <td style="height:8px;background:#16a34a;border-radius:999px 0 0 999px;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
+            <td style="height:8px;background:#eab308;width:34%;font-size:1px;line-height:1px;">&nbsp;</td>
+            <td style="height:8px;background:#dc2626;border-radius:0 999px 999px 0;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="width:33%;text-align:left;height:22px;vertical-align:top;{marker_cells['low'][2]}">{marker_cells['low'][1]}</td>
+            <td style="width:34%;text-align:center;height:22px;vertical-align:top;{marker_cells['typical'][2]}">{marker_cells['typical'][1]}</td>
+            <td style="width:33%;text-align:right;height:22px;vertical-align:top;{marker_cells['high'][2]}">{marker_cells['high'][1]}</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:4px;">
           <tr>
             <td style="font-size:12px;color:#64748b;text-align:left;">Low<br><strong>${insight['range_min']:.3f}</strong></td>
             <td style="font-size:12px;color:#64748b;text-align:center;">Typical<br><strong>${insight['typical_low']:.3f} - ${insight['typical_high']:.3f}</strong></td>
