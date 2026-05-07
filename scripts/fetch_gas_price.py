@@ -1,6 +1,8 @@
 import json
 import os
+import smtplib
 from datetime import datetime, timezone
+from email.message import EmailMessage
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -96,6 +98,52 @@ def build_result():
     }
 
 
+def build_email_body(result):
+    current = result["prices"]["current"]
+    return (
+        f"Daily gas price update for {result['zip']} "
+        f"({result['metro']} metro average)\n\n"
+        f"Regular: {current['regular']}\n"
+        f"Mid-grade: {current['mid_grade']}\n"
+        f"Premium: {current['premium']}\n"
+        f"Diesel: {current['diesel']}\n\n"
+        f"AAA price as of: {result['price_as_of']}\n"
+        f"Source: {result['source']}\n"
+        f"Note: {result['zip_proxy']}\n"
+    )
+
+
+def send_email(result):
+    required = {
+        "SMTP_HOST": os.getenv("SMTP_HOST"),
+        "SMTP_USERNAME": os.getenv("SMTP_USERNAME"),
+        "SMTP_PASSWORD": os.getenv("SMTP_PASSWORD"),
+        "EMAIL_TO": os.getenv("EMAIL_TO"),
+    }
+    missing = [name for name, value in required.items() if not value]
+    if missing:
+        print(f"Skipping email; missing environment variables: {', '.join(missing)}")
+        return
+
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    email_from = os.getenv("EMAIL_FROM", required["SMTP_USERNAME"])
+
+    message = EmailMessage()
+    message["Subject"] = (
+        f"Gas price update: regular {result['prices']['current']['regular']}"
+    )
+    message["From"] = email_from
+    message["To"] = required["EMAIL_TO"]
+    message.set_content(build_email_body(result))
+
+    with smtplib.SMTP(required["SMTP_HOST"], smtp_port, timeout=30) as server:
+        server.starttls()
+        server.login(required["SMTP_USERNAME"], required["SMTP_PASSWORD"])
+        server.send_message(message)
+
+    print(f"Sent gas price email to {required['EMAIL_TO']}")
+
+
 def main():
     output_path = Path(os.getenv("GAS_PRICE_OUTPUT", DEFAULT_OUTPUT))
     result = build_result()
@@ -103,6 +151,9 @@ def main():
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2))
+
+    if os.getenv("SEND_EMAIL", "").lower() in {"1", "true", "yes"}:
+        send_email(result)
 
 
 if __name__ == "__main__":

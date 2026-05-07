@@ -47,6 +47,17 @@ GitHub Actions runs `.github/workflows/daily_gas_price.yml` every day at `15:00 
 
 You can also run it manually from the GitHub repo's **Actions** tab.
 
+## Email Alerts
+
+The workflow can email the daily update through any SMTP account. For Gmail, create an app password and use these GitHub Actions secrets:
+
+- `EMAIL_TO`: Recipient email address.
+- `EMAIL_FROM`: Sender email address. Optional; defaults to `SMTP_USERNAME`.
+- `SMTP_HOST`: SMTP server, for example `smtp.gmail.com`.
+- `SMTP_PORT`: SMTP port, usually `587`.
+- `SMTP_USERNAME`: SMTP username, usually your sender email address.
+- `SMTP_PASSWORD`: SMTP password or Gmail app password.
+
 ## Configuration
 
 Optional environment variables:

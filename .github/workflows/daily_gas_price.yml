@@ -23,6 +23,14 @@ jobs:
           python-version: "3.11"
 
       - name: Fetch AAA gas prices
+        env:
+          SEND_EMAIL: "true"
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: python scripts/fetch_gas_price.py
 
       - name: Commit and push gas price data
