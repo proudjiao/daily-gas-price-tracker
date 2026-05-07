@@ -2,7 +2,7 @@
 
 Fetches the free daily AAA fuel-price average for the Los Angeles-Long Beach metro area and stores it as JSON.
 
-This project uses the Los Angeles-Long Beach metro average as the closest free daily proxy for ZIP code `90048`. AAA does not provide free station-level prices by ZIP code.
+This project uses the Los Angeles-Long Beach metro average. AAA does not provide free station-level prices.
 
 ## Output
 
@@ -17,8 +17,6 @@ Example shape:
 ```json
 {
   "source": "https://gasprices.aaa.com/?state=CA",
-  "zip": "90048",
-  "zip_proxy": "90048 -> Los Angeles-Long Beach metro average",
   "metro": "Los Angeles-Long Beach",
   "price_as_of": "5/7/26",
   "fetched_at": "2026-05-07T07:53:05.528134+00:00",
@@ -87,7 +85,5 @@ Emails are sent as a newsletter-style HTML message with a plain-text fallback. T
 
 Optional environment variables:
 
-- `GAS_PRICE_ZIP`: ZIP metadata stored in the JSON output. Defaults to `90048`.
 - `GAS_PRICE_METRO`: AAA metro section to parse. Defaults to `Los Angeles-Long Beach`.
-- `GAS_PRICE_ZIP_PROXY`: Human-readable note explaining the ZIP-to-metro proxy.
 - `GAS_PRICE_OUTPUT`: Output file path. Defaults to `data/gas_price.json`.

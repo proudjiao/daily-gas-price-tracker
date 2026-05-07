@@ -229,11 +229,6 @@ def build_result():
 
     return {
         "source": AAA_STATE_URL,
-        "zip": os.getenv("GAS_PRICE_ZIP", "90048"),
-        "zip_proxy": os.getenv(
-            "GAS_PRICE_ZIP_PROXY",
-            "90048 -> Los Angeles-Long Beach metro average",
-        ),
         "metro": metro,
         "price_as_of": first_price_date(lines),
         "fetched_at": datetime.now(timezone.utc).isoformat(),
@@ -267,15 +262,14 @@ def build_email_body(result):
         "last week and last month.\n"
         "- Trending up: regular is above yesterday, last week, and last month, "
         "with week/month moves above the threshold.\n\n"
-        f"Daily gas price update for {result['zip']} "
-        f"({result['metro']} metro average)\n\n"
+        f"Daily gas price update for {result['metro']}\n\n"
         f"Regular: {current['regular']}\n"
         f"Mid-grade: {current['mid_grade']}\n"
         f"Premium: {current['premium']}\n"
         f"Diesel: {current['diesel']}\n\n"
         f"AAA price as of: {result['price_as_of']}\n"
         f"Source: {result['source']}\n"
-        f"Note: {result['zip_proxy']}\n"
+        f"Location: {result['metro']}\n"
     )
 
 
@@ -349,7 +343,7 @@ def build_email_html(result):
 
             <tr>
               <td style="padding:22px 24px 4px;">
-                <div style="font-size:13px;color:#64748b;">📍 ZIP {escape(result['zip'])} proxy: {escape(result['metro'])} metro average</div>
+                <div style="font-size:13px;color:#64748b;">📍 {escape(result['metro'])}</div>
                 <div style="font-size:13px;color:#64748b;margin-top:4px;">🗓 AAA price as of: {escape(result['price_as_of'])}</div>
               </td>
             </tr>
@@ -404,7 +398,7 @@ def build_email_html(result):
                 <div style="border-radius:18px;background:#0f172a;color:#e2e8f0;padding:16px;">
                   <div style="font-size:15px;font-weight:900;color:#ffffff;">Why this matters</div>
                   <div style="font-size:14px;line-height:1.5;margin-top:6px;">
-                    Waiting can be risky when the price is already above recent averages and still moving up. This is a metro average proxy, not station-level pricing.
+                    Waiting can be risky when the price is already above recent averages and still moving up. This is the Los Angeles-Long Beach metro average, not station-level pricing.
                   </div>
                 </div>
               </td>
@@ -413,7 +407,7 @@ def build_email_html(result):
             <tr>
               <td style="padding:18px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;line-height:1.5;color:#64748b;">
                 Source: <a href="{escape(result['source'])}" style="color:{theme['accent_dark']};">AAA California gas prices</a><br>
-                Note: {escape(result['zip_proxy'])}<br>
+                Location: {escape(result['metro'])}<br>
                 Fetched at: {escape(result['fetched_at'])}
               </td>
             </tr>
@@ -443,7 +437,7 @@ def send_email(result):
     action_label = format_label(result["recommendation"]["action"])
 
     message = EmailMessage()
-    message["Subject"] = f"{action_label}: Regular {current_regular} in {result['zip']}"
+    message["Subject"] = f"{action_label}: Regular {current_regular} in {result['metro']}"
     message["From"] = email_from
     message["To"] = required["EMAIL_TO"]
     message.set_content(build_email_body(result))
