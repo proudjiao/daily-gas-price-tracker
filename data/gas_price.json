@@ -2,7 +2,7 @@
   "source": "https://gasprices.aaa.com/?state=CA",
   "metro": "Los Angeles-Long Beach",
   "price_as_of": "5/7/26",
-  "fetched_at": "2026-05-07T08:29:14.692894+00:00",
+  "fetched_at": "2026-05-07T08:35:59.887967+00:00",
   "prices": {
     "current": {
       "regular": "$6.244",
@@ -35,13 +35,25 @@
       "diesel": "$4.961"
     }
   },
+  "insight": {
+    "mode": "bootstrap",
+    "sample_size": 5,
+    "range_min": 4.752,
+    "typical_low": 6.048,
+    "typical_high": 6.241,
+    "range_max": 6.244,
+    "position_pct": 100,
+    "status": "high",
+    "label": "$6.244 is high",
+    "methodology": "Insights are based on Los Angeles-Long Beach AAA metro gas prices observed from this daily tracker. Until enough daily history is collected, we bootstrap the range using AAA's current, yesterday, week-ago, month-ago, and year-ago comparison points. We classify prices as low, typical, or high based on where today's regular price sits relative to the observed range and typical middle band."
+  },
   "recommendation": {
     "fuel_type": "regular",
     "status": "high",
     "trend": "trending_up",
     "action": "gas_today",
     "summary": "Prices are high and trending up, so filling today is safer if you need gas soon.",
-    "reason": "Regular is $0.140 above last week and $0.196 above last month.",
+    "reason": "Regular is $0.140 above last week and $0.196 above last month. It sits in the high zone of the observed price range.",
     "comparisons": {
       "vs_yesterday": 0.003,
       "vs_week_ago": 0.14,

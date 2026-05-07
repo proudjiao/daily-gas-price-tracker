@@ -35,7 +35,7 @@ jobs:
 
       - name: Commit and push gas price data
         run: |
-          git add data/gas_price.json
+          git add data/gas_price.json data/history.json
           if ! git diff --cached --quiet; then
             git -c user.name='github-actions[bot]' \
               -c user.email='github-actions[bot]@users.noreply.github.com' \

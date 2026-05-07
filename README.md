@@ -46,13 +46,30 @@ Example shape:
 
 ## Recommendation
 
-The recommendation uses regular gas by default. It compares the current AAA regular price with yesterday, last week, and last month:
+The recommendation uses regular gas by default. It compares today's price against a price range insight and recent trend direction.
 
-- `low`: current price is at least `$0.05` below both last week and last month.
-- `high`: current price is at least `$0.05` above both last week and last month.
-- `normal`: anything between those ranges.
+- `low`: current price is below the typical range.
+- `typical`: current price is inside the typical range.
+- `high`: current price is above the typical range.
 
 The action is `gas_today`, `wait_if_possible`, or `neutral`.
+
+## Price Range Insight
+
+The newsletter includes a Google-style price range bar showing where today's regular price sits relative to observed Los Angeles-Long Beach AAA metro gas prices.
+
+The tracker stores daily observations in:
+
+```text
+data/history.json
+```
+
+History behavior:
+
+- The active insight uses history mode after at least `14` stored observations.
+- Until then, bootstrap mode uses AAA's current, yesterday, week-ago, month-ago, and year-ago comparison points.
+- Range labels use the observed minimum, 25th percentile, 75th percentile, and observed maximum.
+- The history file is deduped by day and metro, sorted oldest to newest, and pruned to the most recent `3` years so the repo does not grow forever.
 
 ## Run Locally
 
@@ -87,3 +104,4 @@ Optional environment variables:
 
 - `GAS_PRICE_METRO`: AAA metro section to parse. Defaults to `Los Angeles-Long Beach`.
 - `GAS_PRICE_OUTPUT`: Output file path. Defaults to `data/gas_price.json`.
+- `GAS_PRICE_HISTORY_OUTPUT`: History file path. Defaults to `data/history.json`.

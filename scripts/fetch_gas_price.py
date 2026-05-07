@@ -1,7 +1,7 @@
 import json
 import os
 import smtplib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from html import escape
 from html.parser import HTMLParser
@@ -12,7 +12,11 @@ from urllib.request import Request, urlopen
 AAA_STATE_URL = "https://gasprices.aaa.com/?state=CA"
 DEFAULT_METRO = "Los Angeles-Long Beach"
 DEFAULT_OUTPUT = "data/gas_price.json"
+DEFAULT_HISTORY_OUTPUT = "data/history.json"
 PRICE_CHANGE_THRESHOLD = 0.05
+HISTORY_MODE_MIN_OBSERVATIONS = 14
+HISTORY_RETENTION_DAYS = 1095
+HISTORY_WINDOW_DAYS = 365
 
 
 class TextParser(HTMLParser):
@@ -85,12 +89,185 @@ def parse_price(price):
     return float(price.replace("$", "").strip())
 
 
+def parse_timestamp(value):
+    if not value:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def load_history(path):
+    history_path = Path(path)
+    if not history_path.exists():
+        return []
+    try:
+        data = json.loads(history_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def write_history(path, history):
+    history_path = Path(path)
+    history_path.parent.mkdir(parents=True, exist_ok=True)
+    history_path.write_text(json.dumps(history, indent=2) + "\n", encoding="utf-8")
+
+
+def build_history_observation(metro, price_as_of, fetched_at, prices):
+    current = prices["current"]
+    return {
+        "date": price_as_of,
+        "fetched_at": fetched_at,
+        "metro": metro,
+        "regular": parse_price(current["regular"]),
+        "mid_grade": parse_price(current["mid_grade"]),
+        "premium": parse_price(current["premium"]),
+        "diesel": parse_price(current["diesel"]),
+    }
+
+
+def dedupe_history(history):
+    latest_by_key = {}
+    for observation in history:
+        key = (observation.get("date"), observation.get("metro"))
+        if not all(key):
+            continue
+        current_latest = latest_by_key.get(key)
+        if current_latest is None or parse_timestamp(
+            observation.get("fetched_at")
+        ) >= parse_timestamp(current_latest.get("fetched_at")):
+            latest_by_key[key] = observation
+    return sorted(
+        latest_by_key.values(),
+        key=lambda observation: parse_timestamp(observation.get("fetched_at")),
+    )
+
+
+def prune_history(history, now):
+    cutoff = now - timedelta(days=HISTORY_RETENTION_DAYS)
+    return [
+        observation
+        for observation in history
+        if parse_timestamp(observation.get("fetched_at")) >= cutoff
+    ]
+
+
+def update_history(history, observation, now):
+    return prune_history(dedupe_history([*history, observation]), now)
+
+
+def selected_history_window(history, metro, now):
+    cutoff = now - timedelta(days=HISTORY_WINDOW_DAYS)
+    selected = [
+        observation
+        for observation in history
+        if observation.get("metro") == metro
+        and parse_timestamp(observation.get("fetched_at")) >= cutoff
+    ]
+    return selected[-HISTORY_WINDOW_DAYS:]
+
+
+def bootstrap_history(metro, fetched_at, prices):
+    labels = {
+        "current": "Current Avg.",
+        "yesterday": "Yesterday Avg.",
+        "week_ago": "Week Ago Avg.",
+        "month_ago": "Month Ago Avg.",
+        "year_ago": "Year Ago Avg.",
+    }
+    return [
+        {
+            "date": labels[key],
+            "fetched_at": fetched_at,
+            "metro": metro,
+            "regular": parse_price(values["regular"]),
+            "mid_grade": parse_price(values["mid_grade"]),
+            "premium": parse_price(values["premium"]),
+            "diesel": parse_price(values["diesel"]),
+        }
+        for key, values in prices.items()
+        if key in labels
+    ]
+
+
+def percentile(values, percentile_value):
+    if not values:
+        raise ValueError("Cannot calculate percentile for an empty list")
+    sorted_values = sorted(values)
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+
+    rank = (len(sorted_values) - 1) * percentile_value
+    lower_index = int(rank)
+    upper_index = min(lower_index + 1, len(sorted_values) - 1)
+    weight = rank - lower_index
+    return sorted_values[lower_index] + (
+        sorted_values[upper_index] - sorted_values[lower_index]
+    ) * weight
+
+
+def price_position(current, range_min, range_max):
+    if range_max == range_min:
+        return 50
+    return max(0, min(100, round(((current - range_min) / (range_max - range_min)) * 100)))
+
+
+def build_price_insight(metro, prices, history_window, fetched_at):
+    if len(history_window) >= HISTORY_MODE_MIN_OBSERVATIONS:
+        mode = "history"
+        sample = history_window
+    else:
+        mode = "bootstrap"
+        sample = bootstrap_history(metro, fetched_at, prices)
+
+    regular_values = [observation["regular"] for observation in sample]
+    current = parse_price(prices["current"]["regular"])
+    range_min = min(regular_values)
+    range_max = max(regular_values)
+    typical_low = percentile(regular_values, 0.25)
+    typical_high = percentile(regular_values, 0.75)
+
+    if current < typical_low:
+        status = "low"
+    elif current > typical_high:
+        status = "high"
+    else:
+        status = "typical"
+
+    methodology = (
+        "Insights are based on Los Angeles-Long Beach AAA metro gas prices "
+        "observed from this daily tracker. Until enough daily history is "
+        "collected, we bootstrap the range using AAA's current, yesterday, "
+        "week-ago, month-ago, and year-ago comparison points. We classify "
+        "prices as low, typical, or high based on where today's regular price "
+        "sits relative to the observed range and typical middle band."
+    )
+
+    return {
+        "mode": mode,
+        "sample_size": len(sample),
+        "range_min": round(range_min, 3),
+        "typical_low": round(typical_low, 3),
+        "typical_high": round(typical_high, 3),
+        "range_max": round(range_max, 3),
+        "position_pct": price_position(current, range_min, range_max),
+        "status": status,
+        "label": f"${current:.3f} is {status}",
+        "methodology": methodology,
+    }
+
+
 def format_change(change):
     direction = "above" if change > 0 else "below"
     return f"${abs(change):.3f} {direction}"
 
 
-def build_recommendation(prices):
+def build_recommendation(prices, insight):
     current = parse_price(prices["current"]["regular"])
     yesterday = parse_price(prices["yesterday"]["regular"])
     week_ago = parse_price(prices["week_ago"]["regular"])
@@ -102,58 +279,56 @@ def build_recommendation(prices):
         "vs_month_ago": round(current - month_ago, 3),
     }
 
-    if (
-        comparisons["vs_week_ago"] <= -PRICE_CHANGE_THRESHOLD
-        and comparisons["vs_month_ago"] <= -PRICE_CHANGE_THRESHOLD
-    ):
-        status = "low"
-    elif (
-        comparisons["vs_week_ago"] >= PRICE_CHANGE_THRESHOLD
-        and comparisons["vs_month_ago"] >= PRICE_CHANGE_THRESHOLD
-    ):
-        status = "high"
-    else:
-        status = "normal"
-
     trending_up = (
         comparisons["vs_yesterday"] > 0
         and comparisons["vs_week_ago"] >= PRICE_CHANGE_THRESHOLD
         and comparisons["vs_month_ago"] >= PRICE_CHANGE_THRESHOLD
     )
-    trend = "trending_up" if trending_up else "mixed"
+    trending_down = (
+        comparisons["vs_yesterday"] < 0
+        and comparisons["vs_week_ago"] <= -PRICE_CHANGE_THRESHOLD
+        and comparisons["vs_month_ago"] <= -PRICE_CHANGE_THRESHOLD
+    )
+
+    if trending_up:
+        trend = "trending_up"
+    elif trending_down:
+        trend = "trending_down"
+    else:
+        trend = "mixed"
+
+    status = insight["status"]
 
     if status == "low" or trending_up:
         action = "gas_today"
-    elif status == "high" and comparisons["vs_yesterday"] <= 0:
+    elif status == "high" and not trending_up:
         action = "wait_if_possible"
-        trend = "easing"
     else:
         action = "neutral"
 
     reason = (
         f"Regular is {format_change(comparisons['vs_week_ago'])} last week "
-        f"and {format_change(comparisons['vs_month_ago'])} last month."
+        f"and {format_change(comparisons['vs_month_ago'])} last month. "
+        f"It sits in the {status} zone of the observed price range."
     )
 
     if status == "low":
         summary = (
-            "Prices are low versus recent averages, so today is a good day to "
-            "fill up."
+            "Prices are low versus the observed range, so today is a good day "
+            "to fill up."
         )
     elif trending_up:
         summary = (
-            "Prices are high and trending up, so filling today is safer if you "
-            "need gas soon."
+            f"Prices are {status} and trending up, so filling today is safer "
+            "if you need gas soon."
+        )
+    elif status == "high":
+        summary = (
+            "Prices are high, but the trend is not clearly rising. Waiting is "
+            "reasonable if your tank is not low."
         )
     else:
-        summaries = {
-            "wait_if_possible": (
-                "Prices are high and not rising today, so waiting is reasonable "
-                "if your tank is not low."
-            ),
-            "neutral": "Prices are mixed or normal, so buy only if you need gas.",
-        }
-        summary = summaries[action]
+        summary = "Prices are typical or mixed, so buy only if you need gas."
 
     return {
         "fuel_type": "regular",
@@ -221,24 +396,35 @@ def recommendation_theme(action):
     return themes.get(action, themes["neutral"])
 
 
-def build_result():
+def build_result(history_path=DEFAULT_HISTORY_OUTPUT):
     metro = os.getenv("GAS_PRICE_METRO", DEFAULT_METRO)
     html = fetch_page(AAA_STATE_URL)
     lines = parse_text_lines(html)
     prices = parse_metro_prices(lines, metro)
+    price_as_of = first_price_date(lines)
+    fetched_at = datetime.now(timezone.utc).isoformat()
+    now = parse_timestamp(fetched_at)
+    existing_history = load_history(history_path)
+    observation = build_history_observation(metro, price_as_of, fetched_at, prices)
+    history = update_history(existing_history, observation, now)
+    history_window = selected_history_window(history, metro, now)
+    insight = build_price_insight(metro, prices, history_window, fetched_at)
 
-    return {
+    result = {
         "source": AAA_STATE_URL,
         "metro": metro,
-        "price_as_of": first_price_date(lines),
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "price_as_of": price_as_of,
+        "fetched_at": fetched_at,
         "prices": prices,
-        "recommendation": build_recommendation(prices),
+        "insight": insight,
+        "recommendation": build_recommendation(prices, insight),
     }
+    return result, history
 
 
 def build_email_body(result):
     current = result["prices"]["current"]
+    insight = result["insight"]
     recommendation = result["recommendation"]
     comparisons = recommendation["comparisons"]
     return (
@@ -248,6 +434,15 @@ def build_email_body(result):
         f"Regular: {current['regular']}\n"
         f"Reason: {recommendation['reason']}\n"
         f"{recommendation['summary']}\n\n"
+        "Price range insight:\n"
+        f"- {insight['label']}\n"
+        f"- Typical range: ${insight['typical_low']:.3f} - "
+        f"${insight['typical_high']:.3f}\n"
+        f"- Observed range: ${insight['range_min']:.3f} - "
+        f"${insight['range_max']:.3f}\n"
+        f"- Position on range: {insight['position_pct']}%\n"
+        f"- Mode: {insight['mode']} ({insight['sample_size']} observations)\n"
+        f"{insight['methodology']}\n\n"
         "Trend check:\n"
         f"- vs yesterday: {format_signed_change(comparisons['vs_yesterday'])} "
         f"{describe_change(comparisons['vs_yesterday'])}\n"
@@ -256,10 +451,8 @@ def build_email_body(result):
         f"- vs last month: {format_signed_change(comparisons['vs_month_ago'])} "
         f"{describe_change(comparisons['vs_month_ago'])}\n\n"
         "How we decide:\n"
-        f"- High: regular is at least ${PRICE_CHANGE_THRESHOLD:.2f} above both "
-        "last week and last month.\n"
-        f"- Low: regular is at least ${PRICE_CHANGE_THRESHOLD:.2f} below both "
-        "last week and last month.\n"
+        "- High: regular is above the typical range.\n"
+        "- Low: regular is below the typical range.\n"
         "- Trending up: regular is above yesterday, last week, and last month, "
         "with week/month moves above the threshold.\n\n"
         f"Daily gas price update for {result['metro']}\n\n"
@@ -310,8 +503,38 @@ def build_flow_step(label):
     """
 
 
+def build_price_range_bar(insight):
+    marker_position = max(4, min(96, insight["position_pct"]))
+    return f"""
+      <div style="border:1px solid #e2e8f0;background:#ffffff;border-radius:20px;padding:18px;margin-top:16px;">
+        <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-weight:800;">Price Range Insight</div>
+        <div style="font-size:22px;font-weight:900;color:#0f172a;margin-top:4px;">Prices are currently {escape(insight['status'])} for Los Angeles-Long Beach</div>
+        <div style="position:relative;margin-top:18px;padding-top:28px;">
+          <div style="position:absolute;left:{marker_position}%;top:0;transform:translateX(-50%);background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap;">{escape(insight['label'])}</div>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:separate;border-spacing:0;">
+            <tr>
+              <td style="height:8px;background:#16a34a;border-radius:999px 0 0 999px;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
+              <td style="height:8px;background:#eab308;width:34%;font-size:1px;line-height:1px;">&nbsp;</td>
+              <td style="height:8px;background:#dc2626;border-radius:0 999px 999px 0;width:33%;font-size:1px;line-height:1px;">&nbsp;</td>
+            </tr>
+          </table>
+          <div style="position:absolute;left:{marker_position}%;top:23px;transform:translateX(-50%);width:14px;height:14px;background:#ffffff;border:4px solid #2563eb;border-radius:999px;"></div>
+        </div>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;">
+          <tr>
+            <td style="font-size:12px;color:#64748b;text-align:left;">Low<br><strong>${insight['range_min']:.3f}</strong></td>
+            <td style="font-size:12px;color:#64748b;text-align:center;">Typical<br><strong>${insight['typical_low']:.3f} - ${insight['typical_high']:.3f}</strong></td>
+            <td style="font-size:12px;color:#64748b;text-align:right;">High<br><strong>${insight['range_max']:.3f}</strong></td>
+          </tr>
+        </table>
+        <p style="font-size:13px;line-height:1.5;color:#475569;margin:14px 0 0;">{escape(insight['methodology'])}</p>
+      </div>
+    """
+
+
 def build_email_html(result):
     current = result["prices"]["current"]
+    insight = result["insight"]
     recommendation = result["recommendation"]
     comparisons = recommendation["comparisons"]
     theme = recommendation_theme(recommendation["action"])
@@ -345,6 +568,7 @@ def build_email_html(result):
               <td style="padding:22px 24px 4px;">
                 <div style="font-size:13px;color:#64748b;">📍 {escape(result['metro'])}</div>
                 <div style="font-size:13px;color:#64748b;margin-top:4px;">🗓 AAA price as of: {escape(result['price_as_of'])}</div>
+                {build_price_range_bar(insight)}
               </td>
             </tr>
 
@@ -381,9 +605,9 @@ def build_email_html(result):
                   <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:10px;">🧪 How We Decide</div>
                   {build_flow_step("Start with regular gas")}
                   <div style="text-align:center;color:#94a3b8;font-size:22px;line-height:1.3;">↓</div>
-                  {build_flow_step("Compare against yesterday, last week, and last month")}
+                  {build_flow_step("Place today's price on the observed range")}
                   <div style="text-align:center;color:#94a3b8;font-size:22px;line-height:1.3;">↓</div>
-                  {build_flow_step(f"High if week and month are both +${PRICE_CHANGE_THRESHOLD:.2f} or more")}
+                  {build_flow_step("High if it is above the typical band")}
                   <div style="text-align:center;color:#94a3b8;font-size:22px;line-height:1.3;">↓</div>
                   {build_flow_step("Gas Today if price is low or clearly trending up")}
                   <p style="font-size:14px;line-height:1.55;color:#334155;margin:14px 0 0;">
@@ -453,10 +677,12 @@ def send_email(result):
 
 def main():
     output_path = Path(os.getenv("GAS_PRICE_OUTPUT", DEFAULT_OUTPUT))
-    result = build_result()
+    history_path = Path(os.getenv("GAS_PRICE_HISTORY_OUTPUT", DEFAULT_HISTORY_OUTPUT))
+    result, history = build_result(history_path)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    write_history(history_path, history)
     print(json.dumps(result, indent=2))
 
     if os.getenv("SEND_EMAIL", "").lower() in {"1", "true", "yes"}:
