@@ -1,63 +1,63 @@
 {
   "source": "https://gasprices.aaa.com/?state=CA",
   "metro": "Los Angeles-Long Beach",
-  "price_as_of": "5/7/26",
-  "fetched_at": "2026-05-07T20:18:07.072201+00:00",
+  "price_as_of": "5/8/26",
+  "fetched_at": "2026-05-08T20:08:46.518727+00:00",
   "prices": {
     "current": {
+      "regular": "$6.236",
+      "mid_grade": "$6.456",
+      "premium": "$6.624",
+      "diesel": "$7.519"
+    },
+    "yesterday": {
       "regular": "$6.244",
       "mid_grade": "$6.460",
       "premium": "$6.630",
       "diesel": "$7.532"
     },
-    "yesterday": {
-      "regular": "$6.241",
-      "mid_grade": "$6.448",
-      "premium": "$6.619",
-      "diesel": "$7.550"
-    },
     "week_ago": {
-      "regular": "$6.104",
-      "mid_grade": "$6.322",
-      "premium": "$6.485",
-      "diesel": "$7.559"
+      "regular": "$6.141",
+      "mid_grade": "$6.354",
+      "premium": "$6.519",
+      "diesel": "$7.563"
     },
     "month_ago": {
       "regular": "$6.048",
-      "mid_grade": "$6.268",
-      "premium": "$6.432",
-      "diesel": "$7.848"
+      "mid_grade": "$6.272",
+      "premium": "$6.428",
+      "diesel": "$7.856"
     },
     "year_ago": {
-      "regular": "$4.752",
-      "mid_grade": "$4.972",
-      "premium": "$5.131",
-      "diesel": "$4.961"
+      "regular": "$4.764",
+      "mid_grade": "$4.979",
+      "premium": "$5.140",
+      "diesel": "$4.950"
     }
   },
   "insight": {
     "mode": "bootstrap",
     "sample_size": 5,
-    "range_min": 4.752,
+    "range_min": 4.764,
     "typical_low": 6.048,
-    "typical_high": 6.241,
+    "typical_high": 6.236,
     "range_max": 6.244,
-    "position_pct": 100,
-    "status": "high",
-    "label": "$6.244 is high",
+    "position_pct": 99,
+    "status": "typical",
+    "label": "$6.236 is typical",
     "methodology": "Insights are based on Los Angeles-Long Beach AAA metro gas prices observed from this daily tracker. Until enough daily history is collected, we bootstrap the range using AAA's current, yesterday, week-ago, month-ago, and year-ago comparison points. We classify prices as low, typical, or high based on where today's regular price sits relative to the observed range and typical middle band."
   },
   "recommendation": {
     "fuel_type": "regular",
-    "status": "high",
-    "trend": "trending_up",
-    "action": "gas_today",
-    "summary": "Prices are high and trending up, so filling today is safer if you need gas soon.",
-    "reason": "Regular is $0.140 above last week and $0.196 above last month. It sits in the high zone of the observed price range.",
+    "status": "typical",
+    "trend": "mixed",
+    "action": "neutral",
+    "summary": "Prices are typical or mixed, so buy only if you need gas.",
+    "reason": "Regular is $0.095 above last week and $0.188 above last month. It sits in the typical zone of the observed price range.",
     "comparisons": {
-      "vs_yesterday": 0.003,
-      "vs_week_ago": 0.14,
-      "vs_month_ago": 0.196
+      "vs_yesterday": -0.008,
+      "vs_week_ago": 0.095,
+      "vs_month_ago": 0.188
     }
   }
 }
