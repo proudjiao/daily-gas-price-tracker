@@ -16,5 +16,14 @@
     "mid_grade": 6.456,
     "premium": 6.624,
     "diesel": 7.519
+  },
+  {
+    "date": "5/9/26",
+    "fetched_at": "2026-05-09T19:58:22.633218+00:00",
+    "metro": "Los Angeles-Long Beach",
+    "regular": 6.232,
+    "mid_grade": 6.453,
+    "premium": 6.619,
+    "diesel": 7.505
   }
 ]
