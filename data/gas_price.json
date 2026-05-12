@@ -1,47 +1,47 @@
 {
   "source": "https://gasprices.aaa.com/?state=CA",
   "metro": "Los Angeles-Long Beach",
-  "price_as_of": "5/11/26",
-  "fetched_at": "2026-05-11T20:48:48.522578+00:00",
+  "price_as_of": "5/12/26",
+  "fetched_at": "2026-05-12T20:42:54.785186+00:00",
   "prices": {
     "current": {
+      "regular": "$6.229",
+      "mid_grade": "$6.454",
+      "premium": "$6.619",
+      "diesel": "$7.490"
+    },
+    "yesterday": {
       "regular": "$6.229",
       "mid_grade": "$6.441",
       "premium": "$6.613",
       "diesel": "$7.478"
     },
-    "yesterday": {
-      "regular": "$6.231",
-      "mid_grade": "$6.453",
-      "premium": "$6.617",
-      "diesel": "$7.498"
-    },
     "week_ago": {
-      "regular": "$6.183",
-      "mid_grade": "$6.388",
-      "premium": "$6.563",
-      "diesel": "$7.557"
+      "regular": "$6.207",
+      "mid_grade": "$6.414",
+      "premium": "$6.583",
+      "diesel": "$7.555"
     },
     "month_ago": {
-      "regular": "$5.998",
-      "mid_grade": "$6.233",
-      "premium": "$6.387",
-      "diesel": "$7.807"
+      "regular": "$5.991",
+      "mid_grade": "$6.229",
+      "premium": "$6.383",
+      "diesel": "$7.792"
     },
     "year_ago": {
-      "regular": "$4.798",
-      "mid_grade": "$5.011",
-      "premium": "$5.175",
-      "diesel": "$4.963"
+      "regular": "$4.808",
+      "mid_grade": "$5.005",
+      "premium": "$5.178",
+      "diesel": "$4.938"
     }
   },
   "insight": {
     "mode": "bootstrap",
     "sample_size": 5,
-    "range_min": 4.798,
-    "typical_low": 5.998,
+    "range_min": 4.808,
+    "typical_low": 5.991,
     "typical_high": 6.229,
-    "range_max": 6.231,
+    "range_max": 6.229,
     "position_pct": 100,
     "status": "typical",
     "label": "$6.229 is typical",
@@ -53,11 +53,11 @@
     "trend": "mixed",
     "action": "neutral",
     "summary": "Prices are typical or mixed, so buy only if you need gas.",
-    "reason": "Regular is $0.046 above last week and $0.231 above last month. It sits in the typical zone of the observed price range.",
+    "reason": "Regular is $0.022 above last week and $0.238 above last month. It sits in the typical zone of the observed price range.",
     "comparisons": {
-      "vs_yesterday": -0.002,
-      "vs_week_ago": 0.046,
-      "vs_month_ago": 0.231
+      "vs_yesterday": 0.0,
+      "vs_week_ago": 0.022,
+      "vs_month_ago": 0.238
     }
   }
 }
