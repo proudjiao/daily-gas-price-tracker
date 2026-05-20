@@ -79,11 +79,9 @@ python scripts/fetch_gas_price.py
 
 No API key or Python dependency install is required.
 
-## Daily Automation
+## Manual Automation
 
-GitHub Actions runs `.github/workflows/daily_gas_price.yml` every day at `19:00 UTC`, which is noon Pacific during daylight saving time.
-
-You can also run it manually from the GitHub repo's **Actions** tab.
+GitHub Actions automatic scheduling is disabled. Run `.github/workflows/daily_gas_price.yml` manually from the GitHub repo's **Actions** tab.
 
 ## Email Alerts
 
